@@ -1,7 +1,10 @@
 use parser::parse_line;
 use std::io::{stdin, BufRead};
 
+use crate::calculator::get_power;
+
 mod parser;
+mod calculator;
 
 fn main() {
     let mut buf = String::new();
@@ -12,9 +15,8 @@ fn main() {
             break;
         }
         let game = parse_line(&buf);
-        if game.is_possible() {
-            sum += game.number
-        }
+        let game_power = get_power(&game);
+        sum += game_power;
         buf.clear();
     }
     println!("{}", sum);
