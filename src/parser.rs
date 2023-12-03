@@ -1,91 +1,89 @@
-macro_rules! value {
-    ($c:expr) => {
-        $c as u8 - '0' as u8
-    };
+use pest::{iterators::{Pair, Pairs}, *};
+use pest_derive::Parser;
+
+const MAX_RED: usize = 12;
+const MAX_GREEN: usize = 13;
+const MAX_BLUE: usize = 14;
+
+#[derive(Parser)]
+#[grammar = "parser.pest"]
+struct GameParser;
+
+#[derive(Debug)]
+pub enum Pull {
+    Red(usize),
+    Green(usize),
+    Blue(usize),
 }
 
-macro_rules! select_match {
-    ($dig: ident, $str: ident, $op:tt) => {
-        match ($dig, $str) {
-            (Some(dig), Some(str)) => {
-                if dig.idx $op str.idx {
-                    dig
-                } else {
-                    str
+impl Pull {
+    pub fn is_possible(&self) -> bool {
+        match self {
+            Pull::Red(n) => *n <= MAX_RED,
+            Pull::Green(n) => *n <= MAX_GREEN,
+            Pull::Blue(n) => *n <= MAX_BLUE
+        }
+    }
+}
+
+impl From<Pair<'_, Rule>> for Pull {
+    fn from(value: Pair<Rule>) -> Self {
+        assert_eq!(value.as_rule(), Rule::SET_ELE);
+        let mut inner = value.into_inner();
+        let num_cubes = inner.next().unwrap();
+        let num_cubes: usize = num_cubes.as_str().parse().unwrap();
+        let color = inner.next().unwrap();
+        match color.as_str() {
+            "red" => Pull::Red(num_cubes),
+            "green" => Pull::Green(num_cubes),
+            "blue" => Pull::Blue(num_cubes),
+            _ => unreachable!("parser error"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Set(pub Vec<Pull>);
+
+impl From<Pairs<'_, Rule>> for Set {
+    fn from(value: Pairs<'_, Rule>) -> Self {
+        Set(value.map(|e| Pull::from(e)).collect())
+    }
+}
+
+#[derive(Debug)]
+pub struct Game {
+    pub number: usize,
+    pub sets: Vec<Set>,
+}
+
+impl Game {
+    pub fn is_possible(&self) -> bool {
+        for set in self.sets.iter() {
+            for pull in set.0.iter() {
+                if !pull.is_possible() {
+                    return false
                 }
             }
-            (Some(dig), None) => dig,
-            (None, Some(str)) => str,
-            _ => unreachable!(),
         }
-    };
-}
-
-type Digit = &'static str;
-
-const DIGITS: [Digit; 10] = [
-    "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
-];
-
-#[derive(Clone, Copy)]
-struct StrMatch {
-    idx: usize,
-    val: usize,
-}
-
-fn digit_indices(line: &[u8]) -> (Option<StrMatch>, Option<StrMatch>) {
-    let mut left: Option<StrMatch> = None;
-    let mut right: Option<StrMatch> = None;
-    for (i, &n) in line.iter().enumerate() {
-        if n.is_ascii_digit() {
-            left = Some(StrMatch {
-                idx: i,
-                val: value!(n) as usize,
-            });
-            break;
-        }
+        true
     }
-
-    for (i, &n) in line.iter().enumerate().rev() {
-        if n.is_ascii_digit() {
-            right = Some(StrMatch {
-                idx: i,
-                val: value!(n) as usize,
-            });
-            break;
-        }
-    }
-
-    (left, right)
 }
 
-fn str_indices(line: &str) -> (Option<StrMatch>, Option<StrMatch>) {
-    let mut left_match: Option<StrMatch> = None;
-    let mut right_match: Option<StrMatch> = None;
-    for (i, &dig) in DIGITS.iter().enumerate() {
-        let l_idx = line.find(dig);
-        let r_idx = line.rfind(dig);
-        left_match = match (l_idx, left_match) {
-            (Some(l), Some(mch)) if l < mch.idx => Some(StrMatch { idx: l, val: i }),
-            (Some(l), None) => Some(StrMatch { idx: l, val: i }),
-            _ => left_match,
-        };
-        right_match = match (r_idx, right_match) {
-            (Some(r), Some(mch)) if r > mch.idx => Some(StrMatch { idx: r, val: i }),
-            (Some(r), None) => Some(StrMatch { idx: r, val: i }),
-            _ => right_match,
-        }
+impl From<Pairs<'_, Rule>> for Game {
+    fn from(mut value: Pairs<'_, Rule>) -> Self {
+        let line = value.next().unwrap();
+        assert_eq!(line.as_rule(), Rule::LINE);
+        let mut line = line.into_inner();
+        let game_id = line.next().unwrap();
+        let game_num = game_id.into_inner().next().unwrap();
+        let sets = line.next().unwrap();
+        let sets: Vec<Set> = sets.into_inner().map(|e| Set::from(e.into_inner())).collect();
+        Game { number: game_num.as_str().parse().unwrap(), sets }
     }
-
-    (left_match, right_match)
 }
 
-pub fn parse_line(line: &str) -> usize {
-    let (left_dig, right_dig) = digit_indices(line.as_bytes());
-    let (left_str, right_str) = str_indices(line);
-
-    let left = select_match!(left_dig, left_str, <);
-    let right = select_match!(right_dig, right_str, >);
-
-    left.val * 10 + right.val
+pub fn parse_line(line: &str) -> Game {
+    let parsed = GameParser::parse(Rule::LINE, line).unwrap();
+    parsed.into()
 }

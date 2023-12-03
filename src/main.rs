@@ -1,5 +1,5 @@
-use std::io::{stdin, BufRead};
 use parser::parse_line;
+use std::io::{stdin, BufRead};
 
 mod parser;
 
@@ -11,7 +11,10 @@ fn main() {
         if n == 0 {
             break;
         }
-        sum += parse_line(&buf[..n - 1]);
+        let game = parse_line(&buf);
+        if game.is_possible() {
+            sum += game.number
+        }
         buf.clear();
     }
     println!("{}", sum);
