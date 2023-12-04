@@ -1,16 +1,21 @@
-use calculator::Calculator;
-use std::io::{stdin, Read};
-
 mod calculator;
 mod parser;
+
+pub use parser::{parse_line, Card};
+use std::io::{stdin, BufRead};
 
 fn main() {
     let mut buf = String::new();
     let mut reader = stdin().lock();
-    if reader.read_to_string(&mut buf).is_ok() {
-        let data = parser::get_data(&buf);
-        let calc = Calculator::new(data.x as i32, data.y as i32, data.numbers, data.symbols);
-        let ans = calc.into_answer();
-        println!("{}", ans);
+    let mut answer: i32 = 0;
+    while let Ok(n) = reader.read_line(&mut buf) {
+        if n == 0 {
+            break;
+        }
+        let card = parse_line(&buf);
+        let score = card.score();
+        answer += score;
+        buf.clear();
     }
+    println!("{}", answer);
 }

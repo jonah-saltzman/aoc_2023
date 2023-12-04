@@ -1,5 +1,8 @@
+CARD_LIT = _{"Card"}
+CARD_SFX = _{":"}
+WS = _{ " "+ }
+CARD_NUM = { ASCII_DIGIT+ }
+CARD_ID = { CARD_LIT ~ WS ~ CARD_NUM ~ CARD_SFX }
 NUM = { ASCII_DIGIT+ }
-SPACE = { "."+ }
-SYM = { !NEWLINE ~ ANY }
-LINE = { (NUM | SPACE | SYM)+ }
-TEXT = { (LINE ~ NEWLINE)+ }
+NUM_LIST = { (WS ~ NUM)+ }
+LINE = { CARD_ID ~ NUM_LIST ~ " |" ~ NUM_LIST }
