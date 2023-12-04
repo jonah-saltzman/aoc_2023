@@ -16,6 +16,11 @@ pub struct Card {
 }
 
 impl Card {
+
+    pub fn number(&self) -> i32 {
+        self.number
+    }
+
     pub fn win_numbers(&self) -> impl Iterator<Item = &i32> {
         self.win_numbers.iter()
     }

@@ -14,7 +14,7 @@ pub fn parse_benchmark(c: &mut Criterion) {
 pub fn calc_benchmark(c: &mut Criterion) {
     let input = get_input();
     let card = parse_line(input);
-    c.bench_function("calc", |b| b.iter(|| black_box(card.clone()).score()));
+    c.bench_function("calc", |b| b.iter(|| black_box(card.clone()).matches()));
 }
 
 criterion_group!(parsing, parse_benchmark);
