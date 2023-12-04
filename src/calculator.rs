@@ -44,7 +44,7 @@ impl Calculator {
         numbers
             .iter()
             .flatten()
-            .map(|n| *n)
+            .copied()
             .filter(|&n| {
                 adjacent_coords
                     .iter()

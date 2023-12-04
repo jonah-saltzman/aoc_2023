@@ -1,5 +1,5 @@
-NUMBER = { ASCII_DIGIT+ }
+NUM = { ASCII_DIGIT+ }
 SPACE = { "."+ }
-SYMBOL = { !NEWLINE ~ ANY }
-LINE = { (NUMBER | SPACE | SYMBOL)+ }
+SYM = { !NEWLINE ~ ANY }
+LINE = { (NUM | SPACE | SYM)+ }
 TEXT = { (LINE ~ NEWLINE)+ }

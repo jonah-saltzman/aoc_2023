@@ -90,7 +90,7 @@ pub fn get_data(input: &str) -> ParseData {
         numbers.push(vec![]);
         for ele in line.into_inner() {
             match ele.as_rule() {
-                Rule::NUMBER => {
+                Rule::NUM => {
                     let val: usize = ele.as_str().parse().unwrap();
                     let left = Coordinate::new((ele.as_span().start() - offset) as i32, y as i32);
                     let right =
@@ -98,11 +98,13 @@ pub fn get_data(input: &str) -> ParseData {
                     let number = Number { val, left, right };
                     numbers[y].push(number);
                 }
-                Rule::SYMBOL => {
-                    let x = ele.as_span().start() - offset;
-                    let coord = Coordinate::new(x as i32, y as i32);
-                    let symbol = Symbol { coord };
-                    symbols[y].push(symbol);
+                Rule::SYM => {
+                    if ele.as_str() == "*" {
+                        let x = ele.as_span().start() - offset;
+                        let coord = Coordinate::new(x as i32, y as i32);
+                        let symbol = Symbol { coord };
+                        symbols[y].push(symbol);
+                    }
                 }
                 Rule::SPACE => {}
                 _ => panic!("unexpected rule"),
