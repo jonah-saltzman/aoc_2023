@@ -1,23 +1,16 @@
-use parser::parse_line;
-use std::io::{stdin, BufRead};
+use calculator::Calculator;
+use std::io::{stdin, Read};
 
-use crate::calculator::get_power;
-
-mod parser;
 mod calculator;
+mod parser;
 
 fn main() {
     let mut buf = String::new();
     let mut reader = stdin().lock();
-    let mut sum: usize = 0;
-    while let Ok(n) = reader.read_line(&mut buf) {
-        if n == 0 {
-            break;
-        }
-        let game = parse_line(&buf);
-        let game_power = get_power(&game);
-        sum += game_power;
-        buf.clear();
+    if let Ok(_) = reader.read_to_string(&mut buf) {
+        let data = parser::get_data(&buf);
+        let calc = Calculator::new(data.x as i32, data.y as i32, data.numbers, data.symbols);
+        let ans = calc.into_answer();
+        println!("{}", ans);
     }
-    println!("{}", sum);
 }

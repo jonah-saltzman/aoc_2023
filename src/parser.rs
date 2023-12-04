@@ -1,91 +1,92 @@
-#![allow(dead_code)]
-
-use pest::{iterators::{Pair, Pairs}, *};
+use pest::Parser;
 use pest_derive::Parser;
-
-const MAX_RED: usize = 12;
-const MAX_GREEN: usize = 13;
-const MAX_BLUE: usize = 14;
 
 #[derive(Parser)]
 #[grammar = "parser.pest"]
-struct GameParser;
+struct TextParser;
 
-#[derive(Debug)]
-pub enum Pull {
-    Red(usize),
-    Green(usize),
-    Blue(usize),
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Coordinate {
+    pub x: i32,
+    pub y: i32,
 }
 
-impl Pull {
-    pub fn is_possible(&self) -> bool {
-        match self {
-            Pull::Red(n) => *n <= MAX_RED,
-            Pull::Green(n) => *n <= MAX_GREEN,
-            Pull::Blue(n) => *n <= MAX_BLUE
-        }
+impl Coordinate {
+    pub fn new(x: i32, y: i32) -> Self {
+        Self { x, y }
     }
 }
 
-impl From<Pair<'_, Rule>> for Pull {
-    fn from(value: Pair<Rule>) -> Self {
-        assert_eq!(value.as_rule(), Rule::SET_ELE);
-        let mut inner = value.into_inner();
-        let num_cubes = inner.next().unwrap();
-        let num_cubes: usize = num_cubes.as_str().parse().unwrap();
-        let color = inner.next().unwrap();
-        match color.as_str() {
-            "red" => Pull::Red(num_cubes),
-            "green" => Pull::Green(num_cubes),
-            "blue" => Pull::Blue(num_cubes),
-            _ => unreachable!("parser error"),
-        }
+#[derive(Debug, Clone, Copy)]
+pub struct Number {
+    pub val: usize,
+    pub left: Coordinate,
+    pub right: Coordinate,
+}
+
+impl std::fmt::Display for Number {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "Number({}) @ from {},{} to {},{}",
+            self.val, self.left.x, self.left.y, self.right.x, self.right.y
+        ))
     }
 }
 
-#[derive(Debug)]
-pub struct Set(pub Vec<Pull>);
-
-impl From<Pairs<'_, Rule>> for Set {
-    fn from(value: Pairs<'_, Rule>) -> Self {
-        Set(value.map(|e| Pull::from(e)).collect())
-    }
+#[derive(Debug, Clone, Copy)]
+pub struct Symbol {
+    pub coord: Coordinate,
 }
 
-#[derive(Debug)]
-pub struct Game {
-    pub number: usize,
-    pub sets: Vec<Set>,
+pub struct ParseData {
+    pub numbers: Vec<Number>,
+    pub symbols: Vec<Vec<Symbol>>,
+    pub x: usize,
+    pub y: usize,
 }
 
-impl Game {
-    pub fn is_possible(&self) -> bool {
-        for set in self.sets.iter() {
-            for pull in set.0.iter() {
-                if !pull.is_possible() {
-                    return false
+pub fn get_data(input: &str) -> ParseData {
+    let text = TextParser::parse(Rule::TEXT, input)
+        .unwrap()
+        .next()
+        .unwrap();
+    assert_eq!(text.as_rule(), Rule::TEXT);
+    let lines = text.into_inner().enumerate();
+    let mut numbers: Vec<Number> = vec![];
+    let mut symbols: Vec<Vec<Symbol>> = vec![];
+    let mut x_max: usize = 0;
+    let mut y_max: usize = 0;
+    for (y, line) in lines {
+        y_max = y;
+        let line_len = line.as_str().len();
+        x_max = line_len - 1;
+        let offset = y + (line_len * y);
+        symbols.push(vec![]);
+        for ele in line.into_inner() {
+            match ele.as_rule() {
+                Rule::NUMBER => {
+                    let val: usize = ele.as_str().parse().unwrap();
+                    let left = Coordinate::new((ele.as_span().start() - offset) as i32, y as i32);
+                    let right =
+                        Coordinate::new((ele.as_span().end() - offset - 1) as i32, y as i32);
+                    let number = Number { val, left, right };
+                    numbers.push(number);
                 }
+                Rule::SYMBOL => {
+                    let x = ele.as_span().start() - offset;
+                    let coord = Coordinate::new(x as i32, y as i32);
+                    let symbol = Symbol { coord };
+                    symbols[y].push(symbol);
+                }
+                Rule::SPACE => {}
+                _ => panic!("unexpected rule"),
             }
         }
-        true
     }
-}
-
-impl From<Pairs<'_, Rule>> for Game {
-    fn from(mut value: Pairs<'_, Rule>) -> Self {
-        let line = value.next().unwrap();
-        assert_eq!(line.as_rule(), Rule::LINE);
-        let mut line = line.into_inner();
-        let game_id = line.next().unwrap();
-        let game_num = game_id.into_inner().next().unwrap();
-        let sets = line.next().unwrap();
-        let sets: Vec<Set> = sets.into_inner().map(|e| Set::from(e.into_inner())).collect();
-        Game { number: game_num.as_str().parse().unwrap(), sets }
+    ParseData {
+        numbers,
+        symbols,
+        x: x_max,
+        y: y_max,
     }
-}
-
-pub fn parse_line(line: &str) -> Game {
-    let parsed = GameParser::parse(Rule::LINE, line).unwrap();
-    parsed.into()
 }

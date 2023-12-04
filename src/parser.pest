@@ -1,8 +1,5 @@
-GAME_NUM   = { ASCII_DIGIT+ }
-GAME_IDENT = { "Game" ~ " " ~ GAME_NUM }
-COLOR      = { "blue" | "red" | "green" }
-NUM_CUBES  = { ASCII_DIGIT+ }
-SET_ELE    = { NUM_CUBES ~ " " ~ COLOR }
-SET        = { SET_ELE ~ (", " ~ SET_ELE)* }
-SET_LIST   = { SET ~ ("; " ~ SET)* }
-LINE       = { GAME_IDENT ~ ": " ~ SET_LIST ~ NEWLINE }
+NUMBER = { ASCII_DIGIT+ }
+SPACE = { "."+ }
+SYMBOL = { !NEWLINE ~ ANY }
+LINE = { (NUMBER | SPACE | SYMBOL)+ }
+TEXT = { (LINE ~ NEWLINE)+ }
