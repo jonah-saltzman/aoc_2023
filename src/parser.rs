@@ -5,7 +5,7 @@ use pest_derive::Parser;
 #[grammar = "parser.pest"]
 struct TextParser;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct Coordinate {
     pub x: i32,
     pub y: i32,
@@ -17,11 +17,26 @@ impl Coordinate {
     }
 }
 
+pub trait HasCoordinates {
+    fn left(&self) -> Coordinate;
+    fn right(&self) -> Coordinate;
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Number {
     pub val: usize,
     pub left: Coordinate,
     pub right: Coordinate,
+}
+
+impl HasCoordinates for Number {
+    fn left(&self) -> Coordinate {
+        self.left
+    }
+
+    fn right(&self) -> Coordinate {
+        self.right
+    }
 }
 
 impl std::fmt::Display for Number {
@@ -38,8 +53,18 @@ pub struct Symbol {
     pub coord: Coordinate,
 }
 
+impl HasCoordinates for Symbol {
+    fn left(&self) -> Coordinate {
+        self.coord
+    }
+
+    fn right(&self) -> Coordinate {
+        self.left()
+    }
+}
+
 pub struct ParseData {
-    pub numbers: Vec<Number>,
+    pub numbers: Vec<Vec<Number>>,
     pub symbols: Vec<Vec<Symbol>>,
     pub x: usize,
     pub y: usize,
@@ -52,7 +77,7 @@ pub fn get_data(input: &str) -> ParseData {
         .unwrap();
     assert_eq!(text.as_rule(), Rule::TEXT);
     let lines = text.into_inner().enumerate();
-    let mut numbers: Vec<Number> = vec![];
+    let mut numbers: Vec<Vec<Number>> = vec![];
     let mut symbols: Vec<Vec<Symbol>> = vec![];
     let mut x_max: usize = 0;
     let mut y_max: usize = 0;
@@ -62,6 +87,7 @@ pub fn get_data(input: &str) -> ParseData {
         x_max = line_len - 1;
         let offset = y + (line_len * y);
         symbols.push(vec![]);
+        numbers.push(vec![]);
         for ele in line.into_inner() {
             match ele.as_rule() {
                 Rule::NUMBER => {
@@ -70,7 +96,7 @@ pub fn get_data(input: &str) -> ParseData {
                     let right =
                         Coordinate::new((ele.as_span().end() - offset - 1) as i32, y as i32);
                     let number = Number { val, left, right };
-                    numbers.push(number);
+                    numbers[y].push(number);
                 }
                 Rule::SYMBOL => {
                     let x = ele.as_span().start() - offset;
