@@ -1,8 +1,9 @@
-CARD_LIT = _{"Card"}
-CARD_SFX = _{":"}
-WS = _{ " "+ }
-CARD_NUM = { ASCII_DIGIT+ }
-CARD_ID = { CARD_LIT ~ WS ~ CARD_NUM ~ CARD_SFX }
-NUM = { ASCII_DIGIT+ }
-NUM_LIST = { (WS ~ NUM)+ }
-LINE = { CARD_ID ~ NUM_LIST ~ " |" ~ NUM_LIST }
+WS = _{" "+}
+NL = _{"\n"}
+
+NUM = {ASCII_DIGIT+}
+WORD = {ASCII_ALPHA+}
+
+SEEDS_DEF = {"seeds:" ~ WS ~ (NUM ~ WS*)+}
+MAP_HEAD = {WORD ~ "-to-" ~ WORD}
+NUM_LINE = {(NUM ~ WS*)+}

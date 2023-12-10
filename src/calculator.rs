@@ -1,40 +1,91 @@
-use std::collections::HashMap;
+use crate::parser::Seeds;
 
-use itertools::Itertools;
-
-use crate::parser::Card;
-
-impl Card {
-    pub fn matches(&self) -> i32 {
-        let intersection = self.have_set().intersection(self.win_set()).collect_vec();
-        intersection.len() as i32
-    }
+enum MapResult {
+    Less,
+    Greater,
+    Some(i64)
 }
 
-#[derive(Default)]
-pub struct Calculator {
-    num_cards: i32,
-    extras: HashMap<i32, i32>
+#[derive(Debug)]
+pub struct MapRange {
+    start: i64,
+    len: i64,
+    offset: i64
 }
 
-impl Calculator {
-
-    pub fn new() -> Self {
-        Self { num_cards: 0, extras: HashMap::new() }
+impl MapRange {
+    pub fn new(start: i64, len: i64, offset: i64) -> Self {
+        Self { start, len, offset }
     }
 
-    pub fn handle_card(&mut self, card: Card) {
-        let instances = *self.extras.get(&card.number()).unwrap_or(&1);
-        self.num_cards += instances;
-        let matches = card.matches();
-        for card_num in (card.number() + 1)..=(card.number() + matches) {
-            let prev_copies = self.extras.get(&card_num).unwrap_or(&1);
-            let new_copies = prev_copies + instances;
-            self.extras.insert(card_num, new_copies);
+    pub(self) fn map(&self, val: i64) -> MapResult {
+        if self.start > val {
+            MapResult::Greater
+        } else if self.start + self.len <= val {
+            MapResult::Less
+        } else {
+            MapResult::Some(self.offset + val)
         }
     }
+}
 
-    pub fn into_result(self) -> i32 {
-        self.num_cards
+#[derive(Debug)]
+pub struct CatMap {
+    from: String,
+    to: String,
+    ranges: Vec<MapRange>
+}
+
+impl PartialEq for CatMap {
+    fn eq(&self, other: &Self) -> bool {
+        self.from == other.from
     }
+}
+
+impl CatMap {
+    pub fn new(from: String, to: String) -> Self {
+        Self { from, to, ranges: vec![] }
+    }
+
+    pub fn add_range(&mut self, range: MapRange) {
+        self.ranges.push(range)
+    }
+}
+
+#[derive(Debug)]
+#[allow(dead_code)]
+pub struct SortedCatMap {
+    from: String,
+    to: String,
+    ranges: Vec<MapRange>
+}
+
+impl SortedCatMap {
+    pub fn from_unsorted(unsorted: CatMap) -> Self {
+        let mut new: Self = Self { from: unsorted.from, to: unsorted.to, ranges: unsorted.ranges };
+        new.ranges.sort_by(|a, b| a.start.cmp(&b.start));
+        new
+    }
+
+    pub fn map_seeds(&self, seeds: &mut Seeds) {
+        for seed in seeds.0.iter_mut() {
+            for range in self.ranges.iter() {
+                match range.map(*seed) {
+                    MapResult::Greater => break,
+                    MapResult::Less => {},
+                    MapResult::Some(mapped) => {
+                        *seed = mapped;
+                        break
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn closest_seed(mut seeds: Seeds, maps: Vec<SortedCatMap>) -> i64 {
+    for map in maps {
+        map.map_seeds(&mut seeds);
+    }
+    *seeds.0.iter().min().unwrap()
 }
